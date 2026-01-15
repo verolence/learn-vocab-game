@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Voice Game MVP</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TASK / LISTENING экран -->
+  <div id="word-screen" class="screen active">
+    <div id="word">APPLE</div>
+    <div id="listening-indicator">LISTENING...</div>
+    <div id="timer">3</div>
+  </div>
+
+  <!-- SUCCESS экран -->
+  <div id="success-screen" class="screen">
+    <img id="success-meme" src="assets/images/good.png" alt="Success Meme">
+  </div>
+
+  <!-- FAIL экран -->
+  <div id="fail-screen" class="screen">
+    <img id="fail-meme" src="assets/images/bad.png" alt="Fail Meme">
+  </div>
+
+  <!-- Аудио -->
+  <audio id="bg-music" loop src="assets/audio/bg.mp3"></audio>
+  <audio id="success-sound" src="assets/audio/success.mp3"></audio>
+  <audio id="fail-sound" src="assets/audio/fail.mp3"></audio>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
