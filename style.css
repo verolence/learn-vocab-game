@@ -22,6 +22,11 @@ html, body {
   align-items: center;
   justify-content: center;
   position: relative;
+
+  /* фон */
+  background-image: url('assets/images/bg.jpeg');
+  background-size: cover;
+  background-position: center;
 }
 
 /* Common screen styles */

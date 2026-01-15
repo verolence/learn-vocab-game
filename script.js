@@ -20,6 +20,23 @@ const wordEl = document.getElementById("word");
 const timerEl = document.getElementById("timer");
 const listeningIndicator = document.getElementById("listening-indicator");
 
+// Добрые мемы
+const goodMemes = [
+  "assets/images/good1.png",
+  "assets/images/good2.png",
+  "assets/images/good3.png",
+  "assets/images/good4.png",
+  "assets/images/good5.png"
+];
+
+// Злые мемы
+const badMemes = [
+  "assets/images/daleko.jpeg",
+  "assets/images/nedumau.jpeg",
+  "assets/images/skoreenet.jpeg",
+  "assets/images/vradli.jpeg"
+];
+
 // Аудио
 const bgMusic = document.getElementById("bg-music");
 const successSound = document.getElementById("success-sound");
@@ -59,12 +76,18 @@ function setState(state) {
 
     case "SUCCESS":
       successScreen.classList.add("active");
+      const randomGood = goodMemes[Math.floor(Math.random() * goodMemes.length)];
+      console.log("Выбранный GOOD мем:", randomGood);
+      document.getElementById("success-meme").src = randomGood;
       successSound.play();
       setTimeout(nextWord, 1200); // через 1.2 сек переходим к следующему слову
       break;
 
     case "FAIL":
       failScreen.classList.add("active");
+      const randomBad = badMemes[Math.floor(Math.random() * badMemes.length)];
+      console.log("Выбранный BAD мем:", randomBad);
+      document.getElementById("fail-meme").src = randomBad;
       failSound.play();
       setTimeout(nextWord, 1000); // через 1 сек переходим к следующему слову
       break;
