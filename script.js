@@ -22,11 +22,9 @@ const listeningIndicator = document.getElementById("listening-indicator");
 
 // Добрые мемы
 const goodMemes = [
-  "assets/images/good1.png",
-  "assets/images/good2.png",
-  "assets/images/good3.png",
-  "assets/images/good4.png",
-  "assets/images/good5.png"
+  "assets/images/yes1.jpeg",
+  "assets/images/yes2.jpeg",
+  "assets/images/yes3.jpeg"
 ];
 
 // Злые мемы
