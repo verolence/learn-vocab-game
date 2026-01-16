@@ -1,3 +1,24 @@
+const SpeechRecognition =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (!SpeechRecognition) {
+  alert("Ваш браузер не поддерживает распознавание речи 😢");
+}
+
+const recognition = new SpeechRecognition();
+
+recognition.lang = "ru-RU"; // пользователь говорит по-русски
+recognition.interimResults = false;
+recognition.maxAlternatives = 1;
+recognition.onresult = (event) => {
+  const spokenText = event.results[0][0].transcript.toLowerCase().trim();
+  console.log("🗣 Пользователь сказал:", spokenText);
+
+  stopListening();          // останавливаем прослушивание
+  checkAnswer(spokenText);  // проверяем слово
+};
+
+
 // ===== Данные =====
 const words = [
   { en: "apple", ru: "яблоко" },
@@ -72,6 +93,7 @@ function setState(state) {
       listeningIndicator.style.opacity = 1;
       timeLeft = 3;
       timerEl.textContent = timeLeft;
+      startListening();
       timer = setInterval(() => {
         timeLeft--;
         timerEl.textContent = timeLeft;
@@ -137,19 +159,30 @@ function updateBackground() {
   }
 }
 
-
-// ===== Симуляция ответа без голоса =====
-wordScreen.addEventListener("click", () => {
-  if (gameState === "LISTENING") {
-    clearInterval(timer);
-    // случайно SUCCESS или FAIL (для теста)
-    if (Math.random() > 0.5) {
-      setState("SUCCESS");
-    } else {
-      setState("FAIL");
-    }
+function startListening() {
+  try {
+    recognition.start();
+    console.log("🎤 Слушаем...");
+  } catch (e) {
+    console.warn("recognition already started");
   }
-});
+}
+
+function stopListening() {
+  recognition.stop();
+  console.log("🛑 Остановили распознавание");
+}
+
+function checkAnswer(result) {
+  const correct = words[currentWordIndex].ru.toLowerCase();
+
+  if (result.includes(correct)) {
+    setState("SUCCESS");
+  } else {
+    stopListening();
+    setState("FAIL");
+  }
+}
 
 // ===== Запуск =====
 bgMusic.play().catch(() => {
