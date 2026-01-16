@@ -39,6 +39,7 @@ const badMemes = [
 const bgMusic = document.getElementById("bg-music");
 const successSound = document.getElementById("success-sound");
 const failSound = document.getElementById("fail-sound");
+failSound.volume = 0.1;
 
 // ===== Функции =====
 function setState(state) {
@@ -87,6 +88,11 @@ function setState(state) {
       console.log("Выбранный BAD мем:", randomBad);
       document.getElementById("fail-meme").src = randomBad;
       failSound.play();
+      // останавливаем через 1 сек
+      setTimeout(() => {
+          failSound.pause();
+          failSound.currentTime = 0;
+      }, 1000);
       setTimeout(nextWord, 1000); // через 1 сек переходим к следующему слову
       break;
   }
