@@ -9,6 +9,8 @@ const words = [
 
 let currentWordIndex = 0;
 let gameState = "TASK";
+let mistakesCount = 0;
+let successStreak = 0;
 let timer = null;
 let timeLeft = 3; // секунды на ответ
 
@@ -19,6 +21,13 @@ const failScreen = document.getElementById("fail-screen");
 const wordEl = document.getElementById("word");
 const timerEl = document.getElementById("timer");
 const listeningIndicator = document.getElementById("listening-indicator");
+
+const backgrounds = {
+  fresh: "assets/images/lavender-fresh.png",
+  mid: "assets/images/lavender-mid.png",
+  dead: "assets/images/lavender-dead.png"
+};
+
 
 // Добрые мемы
 const goodMemes = [
@@ -75,6 +84,11 @@ function setState(state) {
 
     case "SUCCESS":
       successScreen.classList.add("active");
+
+      successStreak += 1;
+      mistakesCount = 0; // ❗️сбрасываем ошибки
+      updateBackground();
+
       const randomGood = goodMemes[Math.floor(Math.random() * goodMemes.length)];
       console.log("Выбранный GOOD мем:", randomGood);
       document.getElementById("success-meme").src = randomGood;
@@ -84,6 +98,11 @@ function setState(state) {
 
     case "FAIL":
       failScreen.classList.add("active");
+
+      mistakesCount += 1;
+      successStreak = 0;
+      updateBackground();
+
       const randomBad = badMemes[Math.floor(Math.random() * badMemes.length)];
       console.log("Выбранный BAD мем:", randomBad);
       document.getElementById("fail-meme").src = randomBad;
@@ -106,6 +125,19 @@ function nextWord() {
   setState("TASK");
 }
 
+function updateBackground() {
+  const app = document.getElementById("app");
+
+  if (mistakesCount === 0) {
+    app.style.backgroundImage = `url(${backgrounds.fresh})`;
+  } else if (mistakesCount === 1) {
+    app.style.backgroundImage = `url(${backgrounds.mid})`;
+  } else {
+    app.style.backgroundImage = `url(${backgrounds.dead})`;
+  }
+}
+
+
 // ===== Симуляция ответа без голоса =====
 wordScreen.addEventListener("click", () => {
   if (gameState === "LISTENING") {
@@ -124,4 +156,5 @@ bgMusic.play().catch(() => {
   // Автоплей в Chrome может блокироваться, включение через клик
 });
 
+updateBackground();
 setState("TASK");
