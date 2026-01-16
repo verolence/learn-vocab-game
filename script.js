@@ -5,20 +5,6 @@ if (!SpeechRecognition) {
   alert("Ваш браузер не поддерживает распознавание речи 😢");
 }
 
-const recognition = new SpeechRecognition();
-
-recognition.lang = "ru-RU"; // пользователь говорит по-русски
-recognition.interimResults = false;
-recognition.maxAlternatives = 1;
-recognition.onresult = (event) => {
-  const spokenText = event.results[0][0].transcript.toLowerCase().trim();
-  console.log("🗣 Пользователь сказал:", spokenText);
-
-  stopListening();          // останавливаем прослушивание
-  checkAnswer(spokenText);  // проверяем слово
-};
-
-
 // ===== Данные =====
 const words = [
   { en: "apple", ru: "яблоко" },
@@ -29,11 +15,8 @@ const words = [
 ];
 
 let currentWordIndex = 0;
-let gameState = "TASK";
 let mistakesCount = 0;
 let successStreak = 0;
-let timer = null;
-let timeLeft = 3; // секунды на ответ
 
 // ===== DOM =====
 const wordScreen = document.getElementById("word-screen");
@@ -42,6 +25,7 @@ const failScreen = document.getElementById("fail-screen");
 const wordEl = document.getElementById("word");
 const timerEl = document.getElementById("timer");
 const listeningIndicator = document.getElementById("listening-indicator");
+const app = document.getElementById("app");
 
 const backgrounds = {
   fresh: "assets/images/lavender-fresh.png",
@@ -49,15 +33,12 @@ const backgrounds = {
   dead: "assets/images/lavender-dead.png"
 };
 
-
-// Добрые мемы
 const goodMemes = [
   "assets/images/yes1.jpeg",
   "assets/images/yes2.jpeg",
   "assets/images/yes3.jpeg"
 ];
 
-// Злые мемы
 const badMemes = [
   "assets/images/daleko.jpeg",
   "assets/images/nedumau.jpeg",
@@ -65,129 +46,150 @@ const badMemes = [
   "assets/images/vradli.jpeg"
 ];
 
-// Аудио
 const bgMusic = document.getElementById("bg-music");
 const successSound = document.getElementById("success-sound");
 const failSound = document.getElementById("fail-sound");
 failSound.volume = 0.1;
 
-// ===== Функции =====
-function setState(state) {
-  gameState = state;
+// ===== Глобальная активная сессия =====
+let currentSession = null;
 
-  // Скрываем все экраны
-  wordScreen.classList.remove("active");
-  successScreen.classList.remove("active");
-  failScreen.classList.remove("active");
+// ===== Класс сессии слова =====
+class WordSession {
+  constructor(word) {
+    this.word = word;
+    this.active = true;
+    this.timeLeft = 3;
+    this.canAnswer = true;
+    this.timer = null;
 
-  switch(state) {
-    case "TASK":
-      wordScreen.classList.add("active");
-      listeningIndicator.style.opacity = 0; // скрываем индикатор на TASK
-      wordEl.textContent = words[currentWordIndex].en;
-      setTimeout(() => setState("LISTENING"), 500); // авто-переход
-      break;
+    this.recognition = new SpeechRecognition();
+    this.recognition.lang = "ru-RU";
+    this.recognition.interimResults = false;
+    this.recognition.maxAlternatives = 1;
 
-    case "LISTENING":
-      wordScreen.classList.add("active");
-      listeningIndicator.style.opacity = 1;
-      timeLeft = 3;
-      timerEl.textContent = timeLeft;
-      startListening();
-      timer = setInterval(() => {
-        timeLeft--;
-        timerEl.textContent = timeLeft;
-        if (timeLeft <= 0) {
-          clearInterval(timer);
-          setState("FAIL"); // тайм-аут = провал
-        }
-      }, 1000);
-      break;
+    this.recognition.onresult = (event) => {
+      if (!this.active) return;
+      const spokenText = event.results[0][0].transcript.toLowerCase().trim();
+      this.handleAnswer(spokenText);
+    };
 
-    case "SUCCESS":
-      successScreen.classList.add("active");
+    this.recognition.onend = () => {
+      if (!this.active) return;
+      if (this.canAnswer) {
+        this.handleFail();
+      }
+    };
+  }
 
-      successStreak += 1;
-      mistakesCount = 0; // ❗️сбрасываем ошибки
-      updateBackground();
+  start() {
+    // Скрываем мемы
+    wordScreen.classList.add("active");
+    successScreen.classList.remove("active");
+    failScreen.classList.remove("active");
 
-      const randomGood = goodMemes[Math.floor(Math.random() * goodMemes.length)];
-      console.log("Выбранный GOOD мем:", randomGood);
-      document.getElementById("success-meme").src = randomGood;
-      successSound.play();
-      setTimeout(nextWord, 1200); // через 1.2 сек переходим к следующему слову
-      break;
+    wordEl.textContent = this.word.en;
+    listeningIndicator.style.opacity = 1;
 
-    case "FAIL":
-      failScreen.classList.add("active");
+    // Запуск Recognition
+    try { this.recognition.start(); } catch(e) {}
 
-      mistakesCount += 1;
-      successStreak = 0;
-      updateBackground();
+    // Таймер
+    this.timer = setInterval(() => {
+      this.timeLeft--;
+      timerEl.textContent = this.timeLeft;
+      if (this.timeLeft <= 0) this.handleFail();
+    }, 1000);
 
-      const randomBad = badMemes[Math.floor(Math.random() * badMemes.length)];
-      console.log("Выбранный BAD мем:", randomBad);
-      document.getElementById("fail-meme").src = randomBad;
-      failSound.play();
-      // останавливаем через 1 сек
-      setTimeout(() => {
-          failSound.pause();
-          failSound.currentTime = 0;
-      }, 1000);
-      setTimeout(nextWord, 1000); // через 1 сек переходим к следующему слову
-      break;
+    timerEl.textContent = this.timeLeft;
+  }
+
+  stop() {
+    this.active = false;
+    this.canAnswer = false;
+    clearInterval(this.timer);
+    try { this.recognition.stop(); } catch(e) {}
+
+    // Сбрасываем глобальную активную сессию
+    if (currentSession === this) currentSession = null;
+  }
+
+  handleAnswer(result) {
+    if (!this.canAnswer) return;
+    this.canAnswer = false;
+
+    const correct = this.word.ru.toLowerCase();
+    if (result.includes(correct)) this.handleSuccess();
+    else this.handleFail();
+  }
+
+  handleSuccess() {
+    if (!this.active) return;
+    this.stop();
+
+    successStreak++;
+    mistakesCount = 0;
+    updateBackground();
+
+    const randomGood = goodMemes[Math.floor(Math.random() * goodMemes.length)];
+    document.getElementById("success-meme").src = randomGood;
+
+    successScreen.classList.add("active");
+    wordScreen.classList.remove("active");
+    failScreen.classList.remove("active");
+
+    successSound.play();
+
+    setTimeout(() => startNextWord(), 1200);
+  }
+
+  handleFail() {
+    if (!this.active) return;
+    this.stop();
+
+    mistakesCount++;
+    successStreak = 0;
+    updateBackground();
+
+    const randomBad = badMemes[Math.floor(Math.random() * badMemes.length)];
+    document.getElementById("fail-meme").src = randomBad;
+
+    failScreen.classList.add("active");
+    wordScreen.classList.remove("active");
+    successScreen.classList.remove("active");
+
+    failSound.play();
+    setTimeout(() => {
+      failSound.pause();
+      failSound.currentTime = 0;
+    }, 1000);
+
+    setTimeout(() => startNextWord(), 1000);
   }
 }
 
-function nextWord() {
+// ===== Функции игры =====
+function startNextWord() {
   currentWordIndex++;
-  if (currentWordIndex >= words.length) {
-    currentWordIndex = 0; // restart после последнего слова
-  }
-  setState("TASK");
+  if (currentWordIndex >= words.length) currentWordIndex = 0;
+  startWordSession(words[currentWordIndex]);
 }
 
 function updateBackground() {
-  const app = document.getElementById("app");
-
-  if (mistakesCount === 0) {
-    app.style.backgroundImage = `url(${backgrounds.fresh})`;
-  } else if (mistakesCount === 1) {
-    app.style.backgroundImage = `url(${backgrounds.mid})`;
-  } else {
-    app.style.backgroundImage = `url(${backgrounds.dead})`;
-  }
+  if (mistakesCount === 0) app.style.backgroundImage = `url(${backgrounds.fresh})`;
+  else if (mistakesCount === 1) app.style.backgroundImage = `url(${backgrounds.mid})`;
+  else app.style.backgroundImage = `url(${backgrounds.dead})`;
 }
 
-function startListening() {
-  try {
-    recognition.start();
-    console.log("🎤 Слушаем...");
-  } catch (e) {
-    console.warn("recognition already started");
-  }
+function startWordSession(word) {
+  // Если уже есть активная сессия, останавливаем её
+  if (currentSession) currentSession.stop();
+
+  currentSession = new WordSession(word);
+  currentSession.start();
 }
 
-function stopListening() {
-  recognition.stop();
-  console.log("🛑 Остановили распознавание");
-}
-
-function checkAnswer(result) {
-  const correct = words[currentWordIndex].ru.toLowerCase();
-
-  if (result.includes(correct)) {
-    setState("SUCCESS");
-  } else {
-    stopListening();
-    setState("FAIL");
-  }
-}
-
-// ===== Запуск =====
-bgMusic.play().catch(() => {
-  // Автоплей в Chrome может блокироваться, включение через клик
-});
-
+// ===== Старт игры =====
+bgMusic.play().catch(() => {});
 updateBackground();
-setState("TASK");
+startWordSession(words[currentWordIndex]);
